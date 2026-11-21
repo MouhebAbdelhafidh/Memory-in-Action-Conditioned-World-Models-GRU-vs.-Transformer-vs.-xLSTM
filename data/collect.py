@@ -36,7 +36,7 @@ SPLITS = {
 POLICIES = ["random", "directed"]  # ids 0 and 1
 
 
-def collect(split, gaps, per_gap, seed, directed_frac, out_dir):
+def collect(split, gaps, per_gap, seed, directed_frac, out_dir, cue_always=False):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     prefix = out_dir / f"cue_recall_{split}"
@@ -52,7 +52,7 @@ def collect(split, gaps, per_gap, seed, directed_frac, out_dir):
         for k, (gap, _) in enumerate(jobs):
             ep_seed = seed * 1_000_000 + k
             pol = int(np.random.default_rng([seed, k, 7]).random() < directed_frac)
-            ep = rollout(gap, POLICIES[pol], ep_seed)
+            ep = rollout(gap, POLICIES[pol], ep_seed, cue_always=cue_always)
             f.write(ep["obs"].tobytes())
             acts.append(ep["actions"]); rews.append(ep["rewards"])
             lengths.append(len(ep["obs"])); cues.append(ep["cue"]); gap_l.append(gap)
@@ -108,10 +108,12 @@ def main():
     ap.add_argument("--seed", type=int, help="override the split's base seed")
     ap.add_argument("--directed-frac", type=float, default=0.5, help="fraction of directed episodes")
     ap.add_argument("--out", default="data")
+    ap.add_argument("--cue-always", action="store_true",
+                    help="positive control: cue visible in every frame (use a separate --out folder)")
     a = ap.parse_args()
     d = SPLITS[a.split]
     collect(a.split, a.gaps or d["gaps"], a.per_gap or d["per_gap"],
-            d["seed"] if a.seed is None else a.seed, a.directed_frac, a.out)
+            d["seed"] if a.seed is None else a.seed, a.directed_frac, a.out, a.cue_always)
 
 
 if __name__ == "__main__":

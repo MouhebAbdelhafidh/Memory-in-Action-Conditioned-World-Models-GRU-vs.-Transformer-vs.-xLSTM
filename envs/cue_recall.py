@@ -37,7 +37,9 @@ NUM_CUES = 4
 
 
 class CueRecallEnv:
-    def __init__(self, gap: int = 10, grid: int = 8, cell: int = 8, max_goal_steps: int = 24):
+    def __init__(self, gap: int = 10, grid: int = 8, cell: int = 8, max_goal_steps: int = 24,
+                 cue_always: bool = False):
+        self.cue_always = cue_always  # positive control: cue stays visible in every frame (no memory needed)
         self.gap = int(gap)
         self.grid = grid
         self.cell = cell
@@ -115,7 +117,7 @@ class CueRecallEnv:
         img = np.empty((self.size, self.size, 3), dtype=np.uint8)
         img[:] = BG
         k = self.cell
-        if self.t == 0:  # cue: only on the very first frame
+        if self.t == 0 or self.cue_always:  # cue: only on the very first frame (unless cue_always)
             lo = self.cue_lo
             self._fill(img, lo, lo, lo + 2, lo + 2, COLORS[self.cue])
         if self.goals_visible:
@@ -162,9 +164,9 @@ def make_policy(name: str, env: CueRecallEnv, rng: np.random.Generator, eps: flo
     raise ValueError(f"unknown policy {name!r}")
 
 
-def rollout(gap: int, policy: str, seed: int, eps: float = 0.1) -> dict:
+def rollout(gap: int, policy: str, seed: int, eps: float = 0.1, cue_always: bool = False) -> dict:
     """Run one full episode and return arrays in the conventions documented above."""
-    env = CueRecallEnv(gap=gap)
+    env = CueRecallEnv(gap=gap, cue_always=cue_always)
     rng = np.random.default_rng([seed, 12345])
     frames = [env.reset(seed=seed)]
     act = make_policy(policy, env, rng, eps)
